@@ -1,13 +1,13 @@
-# Mock Data Generator API (Gemini & Faker)
+# Mock Data Generator API (Scaled & en_GB Focused)
 
-A high-performance mock data generation API that uses **Gemini 1.5 Flash** to intelligently define generation rules and **Faker** for high-volume, deterministic data production.
+A high-performance mock data generation API optimized for the **UK (en_GB) locale** and massive scale (**10 million unique records**).
 
 ## Features
-- **Intelligent Rules**: Uses Gemini (via REST API) to generate locale-specific data rules (names, patterns, states, etc.).
-- **Bulk Generation**: Efficiently produces thousands of records based on the rules.
-- **Caching**: In-memory rule caching to minimize LLM API calls and cost.
-- **Deterministic**: Supports random seeding for reproducible data sets.
-- **Python 3.8+ Compatible**: Uses direct REST calls to bypass SDK version constraints.
+- **Massive Scale**: Capable of generating up to 10M records using **Streaming Responses** to keep memory usage minimal.
+- **UK-Centric**: Focused on `en_GB` locale with British names, postcodes, and phone formats.
+- **Intelligent Rules**: Uses Gemini (via REST API) to generate British-specific data rules.
+- **Deterministic**: Supports random seeding for reproducible large-scale datasets.
+- **Fast Performance**: Optimized generation pipeline capable of >1,000 records/second.
 
 ## Fast Start
 
@@ -17,7 +17,6 @@ A high-performance mock data generation API that uses **Gemini 1.5 Flash** to in
    ```
 
 2. **Configure Environment**:
-   Create a `.env` file based on the template:
    ```env
    GEMINI_API_KEY=your_actual_key_here
    ```
@@ -26,21 +25,17 @@ A high-performance mock data generation API that uses **Gemini 1.5 Flash** to in
    ```bash
    python app.py
    ```
-   Or with reload:
-   ```bash
-   uvicorn app:app --reload
-   ```
 
 4. **API Usage**:
-   Send a `POST` request to `/api/mock-data`:
    ```json
+   POST /api/mock-data
    {
-     "count": 1000,
+     "count": 10000000,
      "locale": "en_GB",
-     "seed": 42,
-     "email_domain": "example.com"
+     "seed": 42
    }
    ```
+
 
 ## Project Structure
 - `app.py`: FastAPI controller and routing.

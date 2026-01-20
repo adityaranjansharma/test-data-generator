@@ -1,22 +1,14 @@
 RULE_CACHE = {
-    "en_US:testcorp.com": {
-        "firstNamePool": ["Alice", "Bob", "Charlie", "Diana", "Edward"],
-        "lastNamePool": ["Smith", "Jones", "Williams", "Brown", "Taylor"],
-        "emailPattern": "{firstName}.{lastName}.{index}@testcorp.com",
-        "phonePattern": "555-####",
-        "allowedStates": ["NY", "CA", "TX", "FL", "IL"],
-        "country": "USA"
-    },
-    "en_GB:testcorp.com": {
-        "firstNamePool": ["Oliver", "George", "Arthur", "Noah", "Jack"],
-        "lastNamePool": ["Smith", "Jones", "Taylor", "Brown", "Williams"],
+    "en_GB:testcorp.co.uk": {
+        "firstNamePool": ["Oliver", "George", "Arthur", "Noah", "Jack", "Leo", "Oscar", "Harry", "Archie", "Alfie"],
+        "lastNamePool": ["Smith", "Jones", "Taylor", "Brown", "Williams", "Wilson", "Johnson", "Davies", "Robinson", "Wright"],
         "emailPattern": "{firstName}.{lastName}.{index}@testcorp.co.uk",
         "phonePattern": "07### ######",
-        "allowedStates": ["London", "Manchester", "Birmingham", "Leeds", "Glasgow"],
+        "allowedStates": ["London", "Manchester", "Birmingham", "Leeds", "Glasgow", "Sheffield", "Liverpool", "Bristol"],
         "country": "UK"
     }
-
 }
+
 
 def get_cached_rules(key):
     return RULE_CACHE.get(key)

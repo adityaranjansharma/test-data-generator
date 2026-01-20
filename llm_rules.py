@@ -15,23 +15,24 @@ def get_generation_rules(locale: str, email_domain: str) -> dict:
         raise ValueError("GEMINI_API_KEY is not set. Please provide a valid API key in the .env file.")
 
     prompt = f"""
-You are a test data architect.
+You are a test data architect specializing in UK (en_GB) mock data.
 
-Generate mock data generation rules as JSON only for the locale: {locale}.
+Generate mock data generation rules as JSON only for the locale: en_GB.
 
 Rules must include:
-- firstNamePool (10–20 common names for locale {locale})
-- lastNamePool
-- emailPattern (must use domain {email_domain})
-- phonePattern
-- allowedStates (if applicable)
-- country
+- firstNamePool (20 common British first names)
+- lastNamePool (20 common British last names)
+- emailPattern (must use domain {email_domain}, include {{firstName}}, {{lastName}}, and {{index}})
+- phonePattern (UK mobile format, e.g., '07### ######')
+- allowedStates (List of 10-15 major UK cities or counties)
+- country (Set to 'United Kingdom')
 
 Constraints:
 - Output valid JSON only
 - No markdown
 - No explanation
 """
+
 
     payload = {
         "contents": [{
