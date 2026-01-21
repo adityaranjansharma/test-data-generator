@@ -1,71 +1,76 @@
 import json
 import os
-import requests
+from google import genai
 from dotenv import load_dotenv
+from pool_calculator import calculate_pool_sizes
 
 load_dotenv()
 
-# Gemini REST API Configuration
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-model_name = "gemini-1.5-flash"
-api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+# Initialize Gemini client (automatically picks up GEMINI_API_KEY from environment)
+client = genai.Client()
 
-def get_generation_rules(locale: str, email_domain: str) -> dict:
-    if not GEMINI_API_KEY or GEMINI_API_KEY == "your_gemini_api_key_here":
-        raise ValueError("GEMINI_API_KEY is not set. Please provide a valid API key in the .env file.")
-
+def get_data_pools(locale: str, email_domain: str, count: int) -> dict:
+    """
+    Fetch all required data pools from Gemini in ONE call using the official SDK.
+    
+    Pools include:
+    - First names and last names (for unique name combinations)
+    - Street names, cities, counties, postcode areas (for unique addresses)
+    """
+    # Calculate optimal pool sizes
+    sizes = calculate_pool_sizes(count)
+    
     prompt = f"""
 You are a test data architect specializing in UK (en_GB) mock data.
 
-Generate mock data generation rules as JSON only for the locale: en_GB.
+Generate mock data pools as JSON for generating {count} unique UK records.
 
-Rules must include:
-- firstNamePool (20 common British first names)
-- lastNamePool (20 common British last names)
-- emailPattern (must use domain {email_domain}, include {{firstName}}, {{lastName}}, and {{index}})
-- phonePattern (UK mobile format, e.g., '07### ######')
-- allowedStates (List of 10-15 major UK cities or counties)
-- country (Set to 'United Kingdom')
+Required pools (return as JSON object):
+{{
+  "firstNames": [array of {sizes['firstNames']} diverse British first names],
+  "lastNames": [array of {sizes['lastNames']} diverse British surnames],
+  "streetNames": [array of {sizes['streets']} UK street names WITHOUT house numbers, e.g. "High Street", "Church Road"],
+  "cities": [array of {sizes['cities']} UK cities],
+  "counties": [array of {sizes['counties']} UK counties],
+  "postcodeAreas": [array of {sizes['postcodeAreas']} UK postcode area codes like "SW", "M", "B", "NW"],
+  "emailPattern": "{'{'}firstName{'}'}.{'{'}lastName{'}'}.{'{'}index{'}'}@{email_domain}",
+  "phonePattern": "07### ######"
+}}
 
-Constraints:
-- Output valid JSON only
-- No markdown
-- No explanation
+Critical requirements:
+- All arrays must contain UNIQUE values only
+- Street names should be realistic UK street types
+- Postcode areas should be real UK area codes
+- Return ONLY valid JSON, no markdown blocks
+- No explanations or additional text
 """
 
-
-    payload = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }],
-        "generationConfig": {
-            "temperature": 0.2,
-            "maxOutputTokens": 800,
-            "responseMimeType": "application/json"
-        }
-    }
-
-    headers = {
-        "Content-Type": "application/json"
-    }
-
-    response = requests.post(api_url, json=payload, headers=headers)
-    
-    if response.status_code != 200:
-        raise Exception(f"Gemini API Error ({response.status_code}): {response.text}")
-
     try:
-        data = response.json()
-        # Navigate the response structure: candidates[0].content.parts[0].text
-        text_content = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        # Use the new SDK with gemini-2.0-flash-lite model
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-lite",
+            contents=prompt
+        )
         
-        # Some versions might return markdown code blocks even with responseMimeType
+        # Extract text from response (response.text is a property, not a method)
+        text_content = str(response.text).strip()
+        
+        # Clean markdown if present
         if text_content.startswith("```json"):
             text_content = text_content[len("```json"):].rsplit("```", 1)[0].strip()
         elif text_content.startswith("```"):
             text_content = text_content[len("```"):].rsplit("```", 1)[0].strip()
 
-        return json.loads(text_content)
-    except (KeyError, IndexError, json.JSONDecodeError) as e:
-        raise Exception(f"Failed to parse Gemini response: {str(e)}\nRaw text: {text_content if 'text_content' in locals() else 'N/A'}")
+        pools = json.loads(text_content)
+       
+        # Validate we got all required pools
+        required_keys = ["firstNames", "lastNames", "streetNames", "cities", "counties", "postcodeAreas"]
+        for key in required_keys:
+            if key not in pools or not isinstance(pools[key], list):
+                raise ValueError(f"Missing or invalid pool: {key}")
+        
+        return pools
+        
+    except Exception as e:
+        raise Exception(f"Failed to fetch pools from Gemini: {str(e)}")
 

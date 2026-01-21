@@ -1,46 +1,78 @@
 from typing import Optional
-from faker import Faker
 import random
 
-def generate_users_stream(count: int, rules: dict, seed: Optional[int]):
-
-    fake = Faker("en_GB")
+def generate_users_stream(count: int, pools: dict, seed: Optional[int]):
+    """
+    Generate user records using LLM-provided pools.
+    
+    Uses combinatorics to create unique records:
+    - Names: Random selection from pools with index for uniqueness
+    - Addresses: Deterministic selection based on index for maximum variety
+    """
     if seed is not None:
-        Faker.seed(seed)
         random.seed(seed)
 
-    # Pre-fetch pools to avoid dictionary lookups in the loop
-    first_names = rules.get("firstNamePool", ["User"])
-    last_names = rules.get("lastNamePool", ["Test"])
-    email_pattern = rules.get("emailPattern", "{firstName}.{lastName}.{index}@{domain}")
-    phone_pattern = rules.get("phonePattern", "07### ######")
-    allowed_states = rules.get("allowedStates", ["NA"])
-    country = rules.get("country", "United Kingdom")
+    # Pre-fetch pools
+    first_names = pools.get("firstNames", ["User"])
+    last_names = pools.get("lastNames", ["Test"])
+    street_names = pools.get("streetNames", ["High Street"])
+    cities = pools.get("cities", ["London"])
+    counties = pools.get("counties", ["Greater London"])
+    postcode_areas = pools.get("postcodeAreas", ["SW"])
+    
+    email_pattern = pools.get("emailPattern", "{firstName}.{lastName}.{index}@domain.co.uk")
+    phone_pattern = pools.get("phonePattern", "07### ######")
 
     for i in range(count):
-        # To ensure uniqueness at 10M scale, we use the index 'i' in the email
-        # and rely on Faker's entropy for other fields.
-        
+        # Names: Random selection for variety
         first = random.choice(first_names)
         last = random.choice(last_names)
 
-        # The {index} in the pattern is key for 10M unique emails
+        # Email: Index ensures uniqueness
         email = email_pattern \
             .replace("{firstName}", first.lower()) \
             .replace("{lastName}", last.lower()) \
             .replace("{index}", str(i))
+
+        # Address: Combinatorial selection for maximum variety
+        street_idx = i % len(street_names)
+        city_idx = (i // len(street_names)) % len(cities)
+        county_idx = (i // (len(street_names) * len(cities))) % len(counties)
+        postcode_idx = (i // 1000) % len(postcode_areas)
+        
+        # House number from index
+        house_number = (i % 10000) + 1
+        
+        # Address Line 2: Flat number (every 5th address)
+        address_line2 = f"Flat {(i % 100) + 1}" if i % 5 == 0 else ""
+        
+        # Generate UK postcode (e.g., "SW1A 2AA")
+        postcode_area = postcode_areas[postcode_idx]
+        postcode_district = (i % 9) + 1
+        postcode_sector = chr(65 + (i % 26))
+        postcode_unit = f"{(i % 9) + 1}{chr(65 + ((i // 26) % 26))}{chr(65 + ((i //676) % 26))}"
+        postcode = f"{postcode_area}{postcode_district}{postcode_sector} {postcode_unit}"
+
+        # Generate phone number
+        phone = ""
+        for char in phone_pattern:
+            if char == '#':
+                phone += str(random.randint(0, 9))
+            else:
+                phone += char
 
         # Yield a single user dict
         yield {
             "firstName": first,
             "lastName": last,
             "email": email,
-            "phone": fake.numerify(phone_pattern),
+            "phone": phone,
             "address": {
-                "street": fake.street_address(),
-                "city": fake.city(),
-                "state": random.choice(allowed_states),
-                "country": country
+                "addressLine1": f"{house_number} {street_names[street_idx]}",
+                "addressLine2": address_line2,
+                "city": cities[city_idx],
+                "county": counties[county_idx],
+                "postcode": postcode,
+                "country": "United Kingdom"
             }
         }
-

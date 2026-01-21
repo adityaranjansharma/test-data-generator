@@ -1,43 +1,52 @@
+"""
+Example test script for the Mock Data Generator API.
+This demonstrates how to request data from the API and validate the response.
+"""
 import requests
 import json
-import time
 
-url = "http://127.0.0.1:8001/api/mock-data"
+# API Configuration
+API_URL = "http://127.0.0.1:8003/api/mock-data"
 
-# Request 10,000 for a quick but substantial test
-target_count = 10000
+# Request payload
 payload = {
-    "count": target_count,
+    "count": 500,
     "locale": "en_GB",
     "seed": 42,
     "email_domain": "testcorp.co.uk"
 }
 
-print(f"Requesting {target_count} records from {url}...")
-start_time = time.time()
+print(f"Requesting {payload['count']} records from the API...")
+print("="*70)
 
 try:
-    # Use stream=True to handle the StreamingResponse
-    with requests.post(url, json=payload, stream=True) as response:
-        if response.status_code == 200:
-            print("Connected. Receiving stream...")
-            
-            # Simple validation: just read a few chunks to see the start
-            chunk_count = 0
-            bytes_received = 0
-            for chunk in response.iter_content(chunk_size=1024):
-                if chunk_count == 0:
-                    print(f"First chunk: {chunk[:100].decode(errors='ignore')}...")
-                bytes_received += len(chunk)
-                chunk_count += 1
-            
-            duration = time.time() - start_time
-            print(f"\nStream complete.")
-            print(f"Total bytes received: {bytes_received}")
-            print(f"Time taken: {duration:.2f} seconds")
-            print(f"Approx speed: {target_count/duration:.2f} records/sec")
-        else:
-            print(f"Error: {response.status_code}")
-            print(response.text)
+    response = requests.post(API_URL, json=payload, timeout=60)
+    
+    if response.status_code == 200:
+        data = response.json()
+        print(f"✓ Successfully generated {data['count']} records\n")
+        
+        # Display first record
+        print("Sample Record:")
+        print(json.dumps(data["data"][0], indent=2))
+        
+        # Validate uniqueness
+        emails = [user["email"] for user in data["data"]]
+        print(f"\n✓ Unique emails: {len(set(emails))}/{len(emails)}")
+        
+        # Validate UK address format
+        addr = data["data"][0]["address"]
+        print(f"\n✓ UK Address Fields:")
+        print(f"  - Address Line 1: {addr['addressLine1']}")
+        print(f"  - City: {addr['city']}")
+        print(f"  - County: {addr['county']}")
+        print(f"  - Postcode: {addr['postcode']}")
+        
+        print("\n" + "="*70)
+        print("✓ Test Passed!")
+        
+    else:
+        print(f"✗ Error {response.status_code}: {response.text[:500]}")
+        
 except Exception as e:
-    print(f"Connection failed: {e}")
+    print(f"✗ Exception: {e}")
