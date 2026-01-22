@@ -6,8 +6,20 @@ from pool_calculator import calculate_pool_sizes
 
 load_dotenv()
 
-# Initialize Gemini client (automatically picks up GEMINI_API_KEY from environment)
-client = genai.Client()
+# Initialize Gemini client lazily
+_client = None
+
+def get_client():
+    global _client
+    if _client is None:
+        try:
+            _client = genai.Client()
+        except ValueError as e:
+            # Re-raise with a more helpful message if likely caused by missing API key
+            if "Missing key inputs" in str(e):
+                raise ValueError("GEMINI_API_KEY environment variable is not set. Please set it to use the generator.") from e
+            raise e
+    return _client
 
 def get_data_pools(locale: str, email_domain: str, count: int) -> dict:
     """
@@ -46,6 +58,7 @@ Critical requirements:
 """
 
     try:
+        client = get_client()
         # Use the new SDK with gemini-2.0-flash-lite model
         response = client.models.generate_content(
             model="gemini-2.0-flash-lite",

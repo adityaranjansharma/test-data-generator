@@ -33,7 +33,7 @@ A high-performance, scalable mock data generation API capable of generating **10
 
 2. **Install dependencies**:
    ```bash
-   pip install fastapi uvicorn faker pydantic google-genai python-dotenv requests
+   pip install -r requirements.txt
    ```
 
 3. **Configure Environment**:
@@ -102,3 +102,13 @@ Pools are cached by locale, domain, and size tier. Subsequent requests for the s
 - `generator.py`: Core logic for combining pools into unique user records.
 - `cache.py`: In-memory caching system.
 - `models.py`: Pydantic data models.
+
+## Deployment on Render
+
+This application is ready to be deployed on Render.
+
+1.  Create a new **Web Service** on Render connected to this repository.
+2.  Render should automatically detect the configuration from `render.yaml`.
+3.  **Important**: You must provide the `GEMINI_API_KEY` environment variable in the Render dashboard for the application to function correctly.
+    -   Key: `GEMINI_API_KEY`
+    -   Value: Your Gemini API key from Google AI Studio.
