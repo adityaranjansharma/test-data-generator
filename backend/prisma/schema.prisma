@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String   // human | service
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ports     Port[]
+  apiKeys   ApiKey[]
+
+  @@map("users")
+}
+
+model ApiKey {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  ownerId     Int      @map("owner_id")
+  environment String?
+  permissions String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  owner       User     @relation(fields: [ownerId], references: [id])
+
+  @@map("api_keys")
+}
+
+model Port {
+  id                  String   @id @default(uuid())
+  name                String
+  ownerId             Int      @map("owner_id")
+  environment         String?
+  maxRecords          Int      @default(100000) @map("max_records")
+  leaseTimeoutSeconds Int      @default(300) @map("lease_timeout_seconds")
+  accessLevel         String   @default("private") @map("access_level") // private | shared | public
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  owner               User     @relation(fields: [ownerId], references: [id])
+  records             Record[]
+
+  @@unique([name, ownerId, environment])
+  @@map("ports")
+}
+
+model Record {
+  id             Int       @id @default(autoincrement())
+  portId         String    @map("port_id")
+  data           String
+  status         String    @default("available") // available | leased | consumed
+  leasedBy       String?   @map("leased_by")
+  leaseExpiresAt DateTime? @map("lease_expires_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  port           Port      @relation(fields: [portId], references: [id])
+  auditLogs      AuditLog[]
+
+  @@index([portId, status])
+  @@index([portId, leaseExpiresAt])
+  @@map("records")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  recordId  Int      @map("record_id")
+  action    String   // leased | consumed | released | expired
+  actor     String   // "api" or user id
+  timestamp DateTime @default(now())
+
+  record    Record   @relation(fields: [recordId], references: [id])
+
+  @@map("audit_logs")
+}
